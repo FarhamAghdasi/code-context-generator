@@ -1,4 +1,4 @@
-# main.py (final - updated with proper error handling)
+# main.py (updated with smart splitter integration)
 """Enhanced project structure and file reader - Main entry point."""
 
 import os
@@ -50,6 +50,10 @@ def run_cli_mode(args):
     if args.custom:
         folder_path = validate_path(args.custom[0])
     
+    # If no path specified, use current directory
+    if not folder_path:
+        folder_path = os.getcwd()
+    
     # Load configuration
     config_manager = ConfigManager()
     
@@ -78,7 +82,7 @@ def run_cli_mode(args):
     output_format = args.format if args.format else config['output_format']
     min_size = args.min_size
     
-    # Fix: Add try-except for modified_after parsing
+    # Parse modified_after date
     modified_after = None
     if args.modified_after:
         try:
@@ -125,18 +129,26 @@ def run_cli_mode(args):
     output_generator = OutputGenerator()
     output = output_generator.format_output(structure, contents, output_format, prompt_template)
     
-    saved_path = output_generator.save_and_open(
-        output, folder_path, output_format, copy_to_clipboard=args.copy
+    # Use smart splitter for saving
+    saved_path = output_generator.save_with_smart_split(
+        output, 
+        folder_path, 
+        output_format, 
+        copy_to_clipboard=args.copy,
+        interactive_split=True
     )
     
-    print(f"\n{Fore.GREEN}✅ {_('Output saved to')}: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
+    print(f"\n{Fore.GREEN}✅ {_('Output saved successfully')}{Style.RESET_ALL}")
     if isinstance(saved_path, list):
         print(f"{Fore.GREEN}✅ Saved in {len(saved_path)} files{Style.RESET_ALL}")
+        for path in saved_path:
+            print(f"  📁 {path}")
     else:
+        print(f"{Fore.GREEN}✅ {_('Output saved to')}: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
         print(f"{Fore.GREEN}✅ {_('Total size')}: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
     
     # Clean up temporary directory if remote repo was cloned
-    if args.remote:
+    if args.remote and folder_path and folder_path == "temp_repo":
         shutil.rmtree(folder_path)
         print(f"{Fore.CYAN}Cleaned up temporary repository{Style.RESET_ALL}")
 
@@ -184,17 +196,22 @@ def run_interactive_mode(args):
         structure, contents, result['output_format'], result['prompt_template']
     )
     
-    saved_path = output_generator.save_and_open(
+    # Use smart splitter for saving
+    saved_path = output_generator.save_with_smart_split(
         output,
         result['folder_path'],
         result['output_format'],
-        copy_to_clipboard=result['copy_to_clipboard']
+        copy_to_clipboard=result['copy_to_clipboard'],
+        interactive_split=True
     )
     
-    print(f"\n{Fore.GREEN}✅ {_('Output saved to')}: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
+    print(f"\n{Fore.GREEN}✅ {_('Output saved successfully')}{Style.RESET_ALL}")
     if isinstance(saved_path, list):
         print(f"{Fore.GREEN}✅ Saved in {len(saved_path)} files{Style.RESET_ALL}")
+        for path in saved_path:
+            print(f"  📁 {path}")
     else:
+        print(f"{Fore.GREEN}✅ {_('Output saved to')}: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
         print(f"{Fore.GREEN}✅ {_('Total size')}: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
 
 
@@ -210,8 +227,8 @@ def main():
     setup_logging(args.log_file)
     
     try:
-        # CLI mode (non-interactive)
-        if args.custom or args.remote:
+        # Check if we should run in CLI mode (non-interactive)
+        if args.custom or args.remote or args.filter or args.keyword or args.regex or args.format:
             run_cli_mode(args)
         else:
             # Interactive mode
