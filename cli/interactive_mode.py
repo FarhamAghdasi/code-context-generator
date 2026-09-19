@@ -20,14 +20,19 @@ class InteractiveMode:
         self.config_manager = ConfigManager()
         self.folder_scanner = FolderScanner(self.config_manager)
     
-    def select_prompts(self):
+    def select_prompts(self, saved_settings=None):
         """Select prompt templates interactively."""
         prompts = list(PROMPT_TEMPLATES.keys())
         prompt_names = [f"{PROMPT_TEMPLATES[k]['name']}" for k in prompts]
         
+        saved_prompts = []
+        if saved_settings:
+            saved_prompts = saved_settings.get('prompt_keys', []) or []
+        
         print(f"\n{Fore.CYAN}Select Prompt Templates (you can select multiple):{Style.RESET_ALL}\n")
         for idx, name in enumerate(prompt_names):
-            print(f"  {idx + 1}. {name}")
+            marker = " (saved)" if prompts[idx] in saved_prompts else ""
+            print(f"  {idx + 1}. {name}{marker}")
         print(f"  0. No prompt template")
         
         selected_indices = input(f"\n{Fore.YELLOW}Enter numbers separated by commas (e.g., 1,3): {Style.RESET_ALL}").strip()
@@ -63,6 +68,31 @@ class InteractiveMode:
         if mode_choice is None:
             return None
         
+        saved_settings = None
+        load_choice = select_from_list(["Yes - Load saved settings", "No - Start fresh"], "Load saved settings?")
+        if load_choice and load_choice.startswith("Yes"):
+            scope_choice = select_from_list(["System profile", "Directory config"], "Settings scope:")
+            if scope_choice:
+                if scope_choice.startswith("System"):
+                    profile_names = self.config_manager.list_profiles()
+                    if profile_names:
+                        profile_choice = select_from_list(profile_names, "Select profile:")
+                        if profile_choice:
+                            saved_settings = self.config_manager.load_settings(profile_name=profile_choice, scope="system")
+                    else:
+                        print(f"{Fore.YELLOW}No system profiles found.{Style.RESET_ALL}")
+                else:
+                    print(f"\n{Fore.CYAN}Enter folder path for directory config{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}Default: {os.getcwd()}{Style.RESET_ALL}")
+                    folder_input = input(f"{Fore.GREEN}> {Style.RESET_ALL}").strip() or os.getcwd()
+                    try:
+                        folder_path = validate_path(folder_input)
+                        saved_settings = self.config_manager.load_settings(folder_path=folder_path, scope="dir")
+                        if not saved_settings:
+                            print(f"{Fore.YELLOW}No directory config found.{Style.RESET_ALL}")
+                    except ValueError as e:
+                        print(f"{Fore.RED}{e}{Style.RESET_ALL}")
+        
         # Step 2: Project type selection
         project_types = self.config_manager.get_all_project_types()
         suggested_type, confidence = self.folder_scanner.detect_project_type_advanced(os.getcwd())
@@ -80,6 +110,8 @@ class InteractiveMode:
             return None
         
         project_type = project_types[type_options.index(project_type_display)]
+        if saved_settings and saved_settings.get('project_type'):
+            project_type = saved_settings['project_type']
         config = self.config_manager.get_project_config(project_type)
         
         # Step 3: Folder path
@@ -171,7 +203,7 @@ class InteractiveMode:
                     modified_after = None
         
         # Step 5: Prompt template selection
-        selected_prompt_keys = self.select_prompts()
+        selected_prompt_keys = self.select_prompts(saved_settings=saved_settings)
         
         # Build combined prompt
         combined_prompt = ""
@@ -186,16 +218,22 @@ class InteractiveMode:
         if format_choice is None:
             return None
         output_format = formats[format_options.index(format_choice)]
+        if saved_settings and saved_settings.get('output_format'):
+            output_format = saved_settings['output_format']
         
         # Step 7: Minify option
         minify_options = ["Yes - Minify content (reduce size)", "No - Keep original content"]
         minify_choice = select_from_list(minify_options, "Enable Minification?")
         minify = (minify_choice == minify_options[0])
+        if saved_settings and saved_settings.get('minify') is not None:
+            minify = bool(saved_settings['minify'])
         
         # Step 8: Copy to clipboard
         clipboard_options = ["Yes - Copy to clipboard", "No"]
         clipboard_choice = select_from_list(clipboard_options, "Copy to Clipboard?")
         copy_to_clipboard = (clipboard_choice == clipboard_options[0])
+        if saved_settings and saved_settings.get('copy_to_clipboard') is not None:
+            copy_to_clipboard = bool(saved_settings['copy_to_clipboard'])
         
         return {
             'folder_path': folder_path,
@@ -211,5 +249,7 @@ class InteractiveMode:
             'minify': minify,
             'copy_to_clipboard': copy_to_clipboard,
             'prompt_template': combined_prompt if combined_prompt else None,
-            'selected_files': selected_files
+            'selected_files': selected_files,
+            'saved_profile_name': None,
+            'saved_scope': None
         }

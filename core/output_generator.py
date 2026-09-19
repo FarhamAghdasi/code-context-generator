@@ -1,4 +1,4 @@
-# core/output_generator.py (COMPLETE REPLACEMENT)
+# core/output_generator.py
 """Output generation module for formatting and saving results."""
 
 import os
@@ -10,35 +10,35 @@ import markdown2
 from colorama import Fore, Style
 from utils.clipboard import copy_to_clipboard as clipboard_copy
 from core.smart_splitter import SmartSplitter
+from core.config_manager import ConfigManager
 
 
 class OutputGenerator:
     """Handles output formatting, saving, and file operations."""
     
-    def __init__(self):
+    def __init__(self, config_manager=None):
         """Initialize OutputGenerator."""
         self.smart_splitter = SmartSplitter()
-        self.split_preference_file = os.path.join("output", "split_preference.json")
+        self.config_manager = config_manager or ConfigManager()
         self.user_split_preference = None
         self._load_split_preference()
     
     def _load_split_preference(self):
-        """Load user's split preference from file."""
-        try:
-            if os.path.exists(self.split_preference_file):
-                with open(self.split_preference_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    self.user_split_preference = data.get('preference')
-                    logging.info(f"Loaded split preference: {self.user_split_preference}")
-        except Exception as e:
-            logging.warning(f"Could not load split preference: {e}")
+        """Load user's split preference from settings."""
+        settings = self.config_manager.load_settings()
+        if settings:
+            self.user_split_preference = settings.get('split_preference')
+            logging.info(f"Loaded split preference: {self.user_split_preference}")
     
-    def _save_split_preference(self, preference):
-        """Save user's split preference to file."""
+    def _save_split_preference(self, preference, folder_path=None, profile_name=None):
+        """Save user's split preference to settings."""
         try:
-            os.makedirs(os.path.dirname(self.split_preference_file), exist_ok=True)
-            with open(self.split_preference_file, 'w', encoding='utf-8') as f:
-                json.dump({'preference': preference, 'date': datetime.datetime.now().isoformat()}, f, indent=2)
+            settings = self.config_manager.load_settings(profile_name=profile_name, folder_path=folder_path) or {}
+            settings['split_preference'] = preference
+            if profile_name:
+                self.config_manager.save_settings(profile_name, settings, scope="system")
+            elif folder_path:
+                self.config_manager.save_settings("default", settings, scope="dir", folder_path=folder_path)
             self.user_split_preference = preference
             logging.info(f"Saved split preference: {preference}")
         except Exception as e:
@@ -112,21 +112,14 @@ class OutputGenerator:
                     if choice == '1':
                         should_split = True
                         use_advanced = False
-                        # Ask if they want to remember this choice
-                        remember = input(f"{Fore.YELLOW}Remember this choice for future? (y/n): {Style.RESET_ALL}").strip().lower()
-                        if remember == 'y':
-                            self._save_split_preference('simple')
+                        self.user_split_preference = 'simple'
                     elif choice == '2':
                         should_split = True
                         use_advanced = True
-                        remember = input(f"{Fore.YELLOW}Remember this choice for future? (y/n): {Style.RESET_ALL}").strip().lower()
-                        if remember == 'y':
-                            self._save_split_preference('advanced')
+                        self.user_split_preference = 'advanced'
                     elif choice == '3':
                         should_split = False
-                        remember = input(f"{Fore.YELLOW}Remember this choice for future? (y/n): {Style.RESET_ALL}").strip().lower()
-                        if remember == 'y':
-                            self._save_split_preference('no_split')
+                        self.user_split_preference = 'no_split'
                     elif choice == '4':
                         # Show options again to set preference
                         print(f"\n{Fore.CYAN}Set your default preference:{Style.RESET_ALL}")
@@ -136,15 +129,15 @@ class OutputGenerator:
                         
                         pref_choice = input(f"\n{Fore.YELLOW}Enter your choice (1-3): {Style.RESET_ALL}").strip()
                         if pref_choice == '1':
-                            self._save_split_preference('simple')
+                            self.user_split_preference = 'simple'
                             should_split = True
                             use_advanced = False
                         elif pref_choice == '2':
-                            self._save_split_preference('advanced')
+                            self.user_split_preference = 'advanced'
                             should_split = True
                             use_advanced = True
                         elif pref_choice == '3':
-                            self._save_split_preference('no_split')
+                            self.user_split_preference = 'no_split'
                             should_split = False
                     else:
                         # Default to simple split

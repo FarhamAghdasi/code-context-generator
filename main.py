@@ -191,7 +191,7 @@ def run_interactive_mode(args):
     )
     
     # Generate and save output
-    output_generator = OutputGenerator()
+    output_generator = OutputGenerator(config_manager=interactive.config_manager)
     output = output_generator.format_output(
         structure, contents, result['output_format'], result['prompt_template']
     )
@@ -213,6 +213,59 @@ def run_interactive_mode(args):
     else:
         print(f"{Fore.GREEN}Output saved to: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
         print(f"{Fore.GREEN}Total size: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
+    
+    save_choice = input(f"\n{Fore.YELLOW}Remember these settings for future? (y/n): {Style.RESET_ALL}").strip().lower()
+    if save_choice == 'y':
+        scope_choice = input(f"{Fore.YELLOW}Save as system profile or directory config? (system/dir): {Style.RESET_ALL}").strip().lower()
+        if scope_choice in ('system', 'dir'):
+            if scope_choice == 'system':
+                profile_names = interactive.config_manager.list_profiles()
+                options = profile_names + ["New profile"]
+                print(f"\n{Fore.CYAN}Select or create profile:{Style.RESET_ALL}")
+                for idx, opt in enumerate(options, 1):
+                    print(f"  {idx}. {opt}")
+                profile_input = input(f"{Fore.GREEN}> {Style.RESET_ALL}").strip()
+                try:
+                    profile_idx = int(profile_input) - 1
+                    profile_name = options[profile_idx]
+                except (ValueError, IndexError):
+                    profile_name = input(f"{Fore.YELLOW}Profile name: {Style.RESET_ALL}").strip()
+                if profile_name:
+                    settings_to_save = {
+                        'project_type': result['project_type'],
+                        'output_format': result['output_format'],
+                        'minify': result['minify'],
+                        'copy_to_clipboard': result['copy_to_clipboard'],
+                        'selected_files': result.get('selected_files'),
+                        'prompt_keys': [],
+                        'split_preference': output_generator.user_split_preference,
+                        'split_settings': None,
+                        'filter_folder': result.get('filter_folder'),
+                        'keyword': result.get('keyword'),
+                        'regex': result.get('regex'),
+                        'min_size': result.get('min_size', 0),
+                        'modified_after': result['modified_after'].isoformat() if result.get('modified_after') else None
+                    }
+                    interactive.config_manager.save_settings(profile_name, settings_to_save, scope="system")
+                    print(f"{Fore.GREEN}Settings saved to system profile '{profile_name}'.{Style.RESET_ALL}")
+            else:
+                settings_to_save = {
+                    'project_type': result['project_type'],
+                    'output_format': result['output_format'],
+                    'minify': result['minify'],
+                    'copy_to_clipboard': result['copy_to_clipboard'],
+                    'selected_files': result.get('selected_files'),
+                    'prompt_keys': [],
+                    'split_preference': output_generator.user_split_preference,
+                    'split_settings': None,
+                    'filter_folder': result.get('filter_folder'),
+                    'keyword': result.get('keyword'),
+                    'regex': result.get('regex'),
+                    'min_size': result.get('min_size', 0),
+                    'modified_after': result['modified_after'].isoformat() if result.get('modified_after') else None
+                }
+                interactive.config_manager.save_settings("default", settings_to_save, scope="dir", folder_path=result['folder_path'])
+                print(f"{Fore.GREEN}Settings saved to directory config.{Style.RESET_ALL}")
 
 
 def main():
