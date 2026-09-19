@@ -3,8 +3,21 @@
 
 import os
 import platform
+from dataclasses import dataclass, field
+from typing import List, Optional
 from colorama import Fore, Style
 from utils.helpers import getch, format_size, get_size_color
+
+
+@dataclass
+class TreeNode:
+    """Tree node for folder/file structure."""
+    name: str
+    path: str
+    is_dir: bool
+    children: List["TreeNode"] = field(default_factory=list)
+    expanded: bool = False
+    selected: bool = False
 
 
 class FileBrowser:
@@ -168,3 +181,200 @@ class FileBrowser:
                         selected_files.discard(file_info['path'])
             elif key.lower() == 'q' or key == '\x1b':  # Q or ESC
                 return None
+
+
+class TreeFileBrowser:
+    """Interactive tree view file browser with expand/collapse and selection."""
+
+    def __init__(self, exclude_folders=None, exclude_extensions=None):
+        self.exclude_folders = set(exclude_folders) if exclude_folders else {'.git'}
+        self.exclude_extensions = set(exclude_extensions) if exclude_extensions else {'.svg', '.jpg', '.png', '.bin'}
+
+    def _build_tree(self, folder_path, rel_prefix=""):
+        nodes = []
+        try:
+            entries = sorted(os.listdir(folder_path), key=lambda s: s.lower())
+        except OSError:
+            return nodes
+
+        for entry in entries:
+            if entry in self.exclude_folders:
+                continue
+            full_path = os.path.join(folder_path, entry)
+            if os.path.islink(full_path):
+                continue
+            rel_path = os.path.join(rel_prefix, entry) if rel_prefix else entry
+            if os.path.isdir(full_path):
+                children = self._build_tree(full_path, rel_path)
+                nodes.append(TreeNode(name=entry, path=rel_path, is_dir=True, children=children))
+            elif os.path.isfile(full_path):
+                ext = os.path.splitext(entry)[1].lower()
+                if ext in self.exclude_extensions:
+                    continue
+                nodes.append(TreeNode(name=entry, path=rel_path, is_dir=False))
+        return nodes
+
+    def _get_visible_nodes(self, root):
+        visible = []
+
+        def walk(nodes, prefix):
+            for idx, node in enumerate(nodes):
+                visible.append((node, prefix))
+                if node.is_dir and node.expanded and node.children:
+                    extension = "│   " if idx < len(nodes) - 1 else "    "
+                    walk(node.children, prefix + extension)
+
+        walk([root], "")
+        return visible
+
+    def _render(self, root, current_node, selected_files):
+        os.system('cls' if platform.system() == 'Windows' else 'clear')
+        visible = self._get_visible_nodes(root)
+        selected_count = self._count_selected_files(root)
+        print(f"\n{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}Tree View - {self.folder_path}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Selected: {selected_count} files{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Commands: ↑↓=Navigate | →=Expand | ←=Collapse | SPACE=Select | A=All | N=None | ENTER=Done | Q=Quit{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}\n")
+
+        for node, prefix in visible:
+            if node.is_dir:
+                marker = "[-]" if node.expanded else "[+]"
+            else:
+                marker = "[X]" if node.path in selected_files else "[ ]"
+            cursor = "> " if node is current_node else "  "
+            size_info = ""
+            if not node.is_dir and node.path in selected_files:
+                try:
+                    size = os.path.getsize(os.path.join(self.folder_path, node.path))
+                    size_info = f" ({format_size(size)})"
+                except OSError:
+                    size_info = ""
+            line = f"{prefix}{marker} {node.name}{size_info}"
+            if node is current_node:
+                print(f"{Fore.GREEN}{cursor}{line}{Style.RESET_ALL}")
+            elif node.path in selected_files:
+                print(f"{Fore.CYAN}{cursor}{line}{Style.RESET_ALL}")
+            else:
+                print(f"{cursor}{line}")
+
+    def _count_selected_files(self, root):
+        count = 0
+        for node in self._flatten(root):
+            if not node.is_dir and node.path in self._selected_files:
+                count += 1
+        return count
+
+    def _flatten(self, root):
+        result = []
+
+        def walk(nodes):
+            for node in nodes:
+                result.append(node)
+                if node.children:
+                    walk(node.children)
+        walk([root])
+        return result
+
+    def browse(self, folder_path):
+        if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
+            print(f"{Fore.RED}Error: Path does not exist or is not a directory: {folder_path}{Style.RESET_ALL}")
+            return None
+
+        self.folder_path = os.path.abspath(folder_path)
+        root = TreeNode(name=os.path.basename(self.folder_path) or self.folder_path, path="", is_dir=True, expanded=True)
+        root.children = self._build_tree(self.folder_path)
+        if not root.children:
+            print(f"{Fore.YELLOW}No files found in the specified directory.{Style.RESET_ALL}")
+            input("Press Enter to continue...")
+            return []
+
+        self._selected_files = set()
+        current_node = root.children[0] if root.children else root
+        visible_nodes = self._get_visible_nodes(root)
+
+        while True:
+            visible_nodes = self._get_visible_nodes(root)
+            self._render(root, current_node, self._selected_files)
+            key = getch()
+
+            if key == 'UP':
+                idx = next((i for i, (n, _) in enumerate(visible_nodes) if n is current_node), -1)
+                if idx > 0:
+                    current_node = visible_nodes[idx - 1][0]
+            elif key == 'DOWN':
+                idx = next((i for i, (n, _) in enumerate(visible_nodes) if n is current_node), -1)
+                if idx < len(visible_nodes) - 1:
+                    current_node = visible_nodes[idx + 1][0]
+            elif key == 'RIGHT':
+                if current_node.is_dir and not current_node.expanded:
+                    current_node.expanded = True
+                elif current_node.is_dir and current_node.children:
+                    idx = next((i for i, (n, _) in enumerate(visible_nodes) if n is current_node), -1)
+                    if idx + 1 < len(visible_nodes):
+                        current_node = visible_nodes[idx + 1][0]
+            elif key == 'LEFT':
+                if current_node.is_dir and current_node.expanded:
+                    current_node.expanded = False
+                else:
+                    parent = self._find_parent(root, current_node)
+                    if parent is not None and parent is not root:
+                        current_node = parent
+            elif key == ' ':
+                if current_node.is_dir:
+                    self._toggle_folder(current_node)
+                else:
+                    if current_node.path in self._selected_files:
+                        self._selected_files.discard(current_node.path)
+                    else:
+                        self._selected_files.add(current_node.path)
+            elif key.lower() == 'a':
+                for node in self._flatten(root):
+                    if not node.is_dir:
+                        self._selected_files.add(node.path)
+            elif key.lower() == 'n':
+                self._selected_files.clear()
+            elif key in ['\r', '\n']:
+                return list(self._selected_files)
+            elif key.lower() == 'q' or key == '\x1b':
+                return None
+
+    def _toggle_folder(self, folder_node):
+        selected = folder_node.path in self._selected_files
+        if selected:
+            self._deselect_folder(folder_node)
+            self._selected_files.discard(folder_node.path)
+        else:
+            self._select_folder(folder_node)
+            if folder_node.path:
+                self._selected_files.add(folder_node.path)
+
+    def _select_folder(self, node):
+        if not node.is_dir:
+            self._selected_files.add(node.path)
+        else:
+            for child in node.children:
+                self._select_folder(child)
+
+    def _deselect_folder(self, node):
+        if not node.is_dir:
+            self._selected_files.discard(node.path)
+        else:
+            for child in node.children:
+                self._deselect_folder(child)
+
+    def _find_parent(self, root, target):
+        for child in root.children:
+            result = self._find_parent_in_subtree(child, target)
+            if result is not None:
+                return result
+        return None
+
+    def _find_parent_in_subtree(self, node, target):
+        for child in node.children:
+            if child is target:
+                return node
+            result = self._find_parent_in_subtree(child, target)
+            if result is not None:
+                return result
+        return None

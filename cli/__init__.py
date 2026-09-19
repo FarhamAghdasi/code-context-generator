@@ -3,10 +3,11 @@
 
 from cli.argument_parser import ArgumentParser
 from cli.interactive_mode import InteractiveMode
-from cli.file_browser import FileBrowser
+from cli.file_browser import FileBrowser, TreeFileBrowser
 
 __all__ = [
     'ArgumentParser',
     'InteractiveMode',
-    'FileBrowser'
+    'FileBrowser',
+    'TreeFileBrowser'
 ]

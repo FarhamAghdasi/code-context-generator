@@ -9,7 +9,7 @@ from utils.git_utils import clone_remote_repo
 from core.config_manager import ConfigManager
 from core.folder_scanner import FolderScanner
 from prompts.templates import PROMPT_TEMPLATES
-from cli.file_browser import FileBrowser
+from cli.file_browser import FileBrowser, TreeFileBrowser
 
 
 class InteractiveMode:
@@ -55,14 +55,13 @@ class InteractiveMode:
         
         modes = [
             "Standard Mode (with prompts and filters)",
-            "Interactive File Browser (select specific files)"
+            "Interactive File Browser (select specific files)",
+            "Tree View Picker (navigate folders and select files)"
         ]
         
         mode_choice = select_from_list(modes, "Select Mode:")
         if mode_choice is None:
             return None
-        
-        use_file_browser = (mode_choice == modes[1])
         
         # Step 2: Project type selection
         project_types = self.config_manager.get_all_project_types()
@@ -106,9 +105,22 @@ class InteractiveMode:
         
         # Step 4: File browser mode or standard mode
         selected_files = None
-        if use_file_browser:
+        if mode_choice == modes[1]:
             file_browser = FileBrowser(config['exclude_folders'], config['exclude_extensions'])
             selected_files = file_browser.browse(folder_path)
+            if selected_files is None:
+                print(f"{Fore.RED}File selection cancelled.{Style.RESET_ALL}")
+                return None
+            print(f"\n{Fore.GREEN}Selected {len(selected_files)} files.{Style.RESET_ALL}")
+            
+            filter_folder = None
+            keyword = None
+            regex = None
+            min_size = 0
+            modified_after = None
+        elif mode_choice == modes[2]:
+            tree_browser = TreeFileBrowser(config['exclude_folders'], config['exclude_extensions'])
+            selected_files = tree_browser.browse(folder_path)
             if selected_files is None:
                 print(f"{Fore.RED}File selection cancelled.{Style.RESET_ALL}")
                 return None
