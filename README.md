@@ -14,13 +14,13 @@ This tool generates a folder structure and file contents for a given directory o
 - Copy output to clipboard with `--copy`.
 - Threaded file processing for performance.
 - Save user settings as profiles in `profiles.json`.
-- Add AI prompts for Error Fixing, Explain to AI, Adding New Feature, and Auto-Commiter.
+- Add prompt templates for Error Fixing, Explain, Adding New Feature, and Auto-Commiter.
 - Modular code structure with utilities in `utils` folder.
 
 ## Project Structure
 ```
 ├── [FILE] .gitignore
-├── [FILE] ai-get.bat
+├── [FILE] context-gen.bat
 ├── [FILE] config.json
 ├── [DIR] locale
 │   └── [DIR] fa
@@ -42,20 +42,20 @@ This tool generates a folder structure and file contents for a given directory o
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd python-ai-data
+   cd code-context-generator
    ```
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. (Windows) Run using the batch file:
-   ```bash
-   ai-get.bat
-   ```
-   (Linux/macOS) Run directly:
-   ```bash
-   python main.py
-   ```
+ 3. (Windows) Run using the batch file:
+    ```bash
+    context-gen.bat
+    ```
+    (Linux/macOS) Run directly:
+    ```bash
+    python main.py
+    ```
 
 ## Usage
 ### Interactive Mode
@@ -142,12 +142,12 @@ Enter profile name: my_laravel_profile
 Profiles are saved in `profiles.json`.
 
 ### Prompts
-Add AI prompts at the start of interactive mode:
+Add prompt templates at the start of interactive mode:
 ```bash
 Would you like to add a prompt? (y/n): y
 Select a prompt type (use arrow keys, Enter to select, 'q' to skip):
 → error_fixing
-  explain_to_ai
+  explain
   adding_new_feature
   auto_commiter
 ```

@@ -76,7 +76,7 @@ class SmartSplitter:
         print(f"{Fore.CYAN}{'=' * 70}{Style.RESET_ALL}\n")
         
         # Step 1: Split strategy
-        print(f"{Fore.YELLOW}📊 SPLIT STRATEGY:{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}SPLIT STRATEGY:{Style.RESET_ALL}")
         print(f"{Fore.CYAN}Choose how you want to split the output:{Style.RESET_ALL}\n")
         
         strategies = [
@@ -85,7 +85,7 @@ class SmartSplitter:
             ("Split by logical sections (functions/classes/headings)", SplitStrategy.BY_SECTIONS),
             ("Split by character count", SplitStrategy.BY_CHARACTERS),
             ("Balanced splitting (intelligent auto-balancing)", SplitStrategy.BALANCED),
-            ("🔹 HYBRID MODE: Both file count AND size limit (BEST for AI) 🔹", SplitStrategy.HYBRID)
+            ("Hybrid mode: Both file count AND size limit", SplitStrategy.HYBRID)
         ]
         
         for idx, (desc, _) in enumerate(strategies, 1):
@@ -97,13 +97,13 @@ class SmartSplitter:
         while True:
             try:
                 print()
-                choice = int(input(f"{Fore.YELLOW}👉 Enter your choice (1-{len(strategies)}): {Style.RESET_ALL}").strip())
+                choice = int(input(f"{Fore.YELLOW}Enter your choice (1-{len(strategies)}): {Style.RESET_ALL}").strip())
                 if 1 <= choice <= len(strategies):
                     strategy = strategies[choice - 1][1]
                     break
-                print(f"{Fore.RED}❌ Invalid choice. Please try again.{Style.RESET_ALL}")
+                print(f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}")
             except ValueError:
-                print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         # Step 2: Get limits based on strategy
         limit = None
@@ -111,42 +111,42 @@ class SmartSplitter:
         max_size_mb = None
         
         if strategy == SplitStrategy.BY_FILES:
-            print(f"\n{Fore.YELLOW}📁 FILE COUNT LIMIT:{Style.RESET_ALL}")
+            print(f"\n{Fore.YELLOW}FILE COUNT LIMIT:{Style.RESET_ALL}")
             while True:
                 try:
-                    limit = int(input(f"{Fore.YELLOW}👉 Maximum number of split files (1-100): {Style.RESET_ALL}").strip())
+                    limit = int(input(f"{Fore.YELLOW}Maximum number of split files (1-100): {Style.RESET_ALL}").strip())
                     if 1 <= limit <= 100:
                         break
-                    print(f"{Fore.RED}❌ Please enter a number between 1 and 100.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a number between 1 and 100.{Style.RESET_ALL}")
                 except ValueError:
-                    print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         elif strategy == SplitStrategy.BY_SIZE:
-            print(f"\n{Fore.YELLOW}💾 SIZE LIMIT PER FILE:{Style.RESET_ALL}")
+            print(f"\n{Fore.YELLOW}SIZE LIMIT PER FILE:{Style.RESET_ALL}")
             while True:
                 try:
-                    mb = float(input(f"{Fore.YELLOW}👉 Maximum size per file (MB, 0.1-50): {Style.RESET_ALL}").strip())
+                    mb = float(input(f"{Fore.YELLOW}Maximum size per file (MB, 0.1-50): {Style.RESET_ALL}").strip())
                     if 0.1 <= mb <= 50:
                         limit = int(mb * 1024 * 1024)
-                        print(f"{Fore.CYAN}   → That's approximately {limit:,} characters{Style.RESET_ALL}")
+                        print(f"{Fore.CYAN}   That's approximately {limit:,} characters{Style.RESET_ALL}")
                         break
-                    print(f"{Fore.RED}❌ Please enter a size between 0.1 and 50 MB.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a size between 0.1 and 50 MB.{Style.RESET_ALL}")
                 except ValueError:
-                    print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         elif strategy == SplitStrategy.BY_CHARACTERS:
-            print(f"\n{Fore.YELLOW}📝 CHARACTER LIMIT:{Style.RESET_ALL}")
+            print(f"\n{Fore.YELLOW}CHARACTER LIMIT:{Style.RESET_ALL}")
             while True:
                 try:
-                    limit = int(input(f"{Fore.YELLOW}👉 Maximum characters per file (1000-500000): {Style.RESET_ALL}").strip())
+                    limit = int(input(f"{Fore.YELLOW}Maximum characters per file (1000-500000): {Style.RESET_ALL}").strip())
                     if 1000 <= limit <= 500000:
                         break
-                    print(f"{Fore.RED}❌ Please enter a number between 1000 and 500,000.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a number between 1000 and 500,000.{Style.RESET_ALL}")
                 except ValueError:
-                    print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         elif strategy == SplitStrategy.HYBRID:
-            print(f"\n{Fore.MAGENTA}🔹 HYBRID MODE CONFIGURATION 🔹{Style.RESET_ALL}")
+            print(f"\n{Fore.MAGENTA}HYBRID MODE CONFIGURATION{Style.RESET_ALL}")
             print(f"{Fore.CYAN}This mode will split files based on BOTH limits:{Style.RESET_ALL}")
             print(f"{Fore.CYAN}- Maximum number of files{Style.RESET_ALL}")
             print(f"{Fore.CYAN}- Maximum size per file{Style.RESET_ALL}")
@@ -155,27 +155,27 @@ class SmartSplitter:
             # Get max files
             while True:
                 try:
-                    max_files = int(input(f"{Fore.YELLOW}👉 Maximum number of split files (1-100): {Style.RESET_ALL}").strip())
+                    max_files = int(input(f"{Fore.YELLOW}Maximum number of split files (1-100): {Style.RESET_ALL}").strip())
                     if 1 <= max_files <= 100:
                         break
-                    print(f"{Fore.RED}❌ Please enter a number between 1 and 100.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a number between 1 and 100.{Style.RESET_ALL}")
                 except ValueError:
-                    print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
             
             # Get max size per file
             while True:
                 try:
-                    max_size_mb = float(input(f"{Fore.YELLOW}👉 Maximum size per file (MB, 0.1-50): {Style.RESET_ALL}").strip())
+                    max_size_mb = float(input(f"{Fore.YELLOW}Maximum size per file (MB, 0.1-50): {Style.RESET_ALL}").strip())
                     if 0.1 <= max_size_mb <= 50:
                         limit = int(max_size_mb * 1024 * 1024)
-                        print(f"{Fore.CYAN}   → That's approximately {limit:,} characters per file{Style.RESET_ALL}")
+                        print(f"{Fore.CYAN}   That's approximately {limit:,} characters per file{Style.RESET_ALL}")
                         break
-                    print(f"{Fore.RED}❌ Please enter a size between 0.1 and 50 MB.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a size between 0.1 and 50 MB.{Style.RESET_ALL}")
                 except ValueError:
-                    print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                    print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         # Step 3: Boundary type for clean splitting
-        print(f"\n{Fore.YELLOW}🎯 SPLIT BOUNDARY TYPE:{Style.RESET_ALL}")
+        print(f"\n{Fore.YELLOW}SPLIT BOUNDARY TYPE:{Style.RESET_ALL}")
         print(f"{Fore.CYAN}How should content be split? (Choose for clean boundaries){Style.RESET_ALL}\n")
         
         boundary_options = [
@@ -193,17 +193,17 @@ class SmartSplitter:
         while True:
             try:
                 print()
-                choice = int(input(f"{Fore.YELLOW}👉 Enter your choice (1-{len(boundary_options)}): {Style.RESET_ALL}").strip())
+                choice = int(input(f"{Fore.YELLOW}Enter your choice (1-{len(boundary_options)}): {Style.RESET_ALL}").strip())
                 if 1 <= choice <= len(boundary_options):
                     boundary_type = boundary_options[choice - 1][1]
                     break
-                print(f"{Fore.RED}❌ Invalid choice. Please try again.{Style.RESET_ALL}")
+                print(f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}")
             except ValueError:
-                print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         # Step 4: Overlap for context preservation
-        print(f"\n{Fore.YELLOW}🔄 CONTEXT OVERLAP:{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}Add context from previous file to help AI understand continuity{Style.RESET_ALL}\n")
+        print(f"\n{Fore.YELLOW}CONTEXT OVERLAP:{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}Add context from previous file to maintain continuity{Style.RESET_ALL}\n")
         
         overlap_options = [
             ("No overlap (smallest files, no context)", 0),
@@ -218,23 +218,23 @@ class SmartSplitter:
         while True:
             try:
                 print()
-                choice = int(input(f"{Fore.YELLOW}👉 Enter your choice (1-{len(overlap_options)}): {Style.RESET_ALL}").strip())
+                choice = int(input(f"{Fore.YELLOW}Enter your choice (1-{len(overlap_options)}): {Style.RESET_ALL}").strip())
                 if 1 <= choice <= len(overlap_options):
                     overlap_chars = overlap_options[choice - 1][1]
                     if overlap_chars > 0:
-                        print(f"{Fore.CYAN}   → Will add {overlap_chars} characters of context from previous file{Style.RESET_ALL}")
+                        print(f"{Fore.CYAN}   Will add {overlap_chars} characters of context from previous file{Style.RESET_ALL}")
                     break
-                print(f"{Fore.RED}❌ Invalid choice.{Style.RESET_ALL}")
+                print(f"{Fore.RED}Invalid choice.{Style.RESET_ALL}")
             except ValueError:
-                print(f"{Fore.RED}❌ Please enter a valid number.{Style.RESET_ALL}")
+                print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         
         # Step 5: Show summary
         print(f"\n{Fore.CYAN}{'=' * 70}{Style.RESET_ALL}")
-        print(f"{Fore.GREEN}✅ SPLIT CONFIGURATION SUMMARY:{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}SPLIT CONFIGURATION SUMMARY:{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{'=' * 70}{Style.RESET_ALL}")
         
         if strategy == SplitStrategy.HYBRID:
-            print(f"  Strategy:      {Fore.MAGENTA}{strategy.value.upper()} (BEST for AI){Style.RESET_ALL}")
+            print(f"  Strategy:      {Fore.MAGENTA}{strategy.value.upper()}{Style.RESET_ALL}")
             print(f"  Max Files:     {Fore.YELLOW}{max_files}{Style.RESET_ALL}")
             print(f"  Max Size:      {Fore.YELLOW}{max_size_mb} MB ({limit:,} chars){Style.RESET_ALL}")
         else:
@@ -278,7 +278,7 @@ class SmartSplitter:
         boundary_type = preferences.get('boundary_type', BoundaryType.SENTENCE)
         overlap = preferences.get('overlap_chars', 100)
         
-        print(f"\n{Fore.CYAN}🔪 Splitting content using {strategy.value} strategy...{Style.RESET_ALL}")
+        print(f"\n{Fore.CYAN}Splitting content using {strategy.value} strategy...{Style.RESET_ALL}")
         
         if strategy == SplitStrategy.BY_FILES and limit:
             return self._split_by_file_count(content, limit, boundary_type, overlap)
@@ -312,7 +312,7 @@ class SmartSplitter:
         target_size = total_size // optimal_files
         target_size = min(target_size, max_size)
         
-        print(f"{Fore.CYAN}   📊 Hybrid Analysis:{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}   Hybrid Analysis:{Style.RESET_ALL}")
         print(f"      Total size: {total_size:,} chars")
         print(f"      Max files allowed: {max_files}")
         print(f"      Max size per file: {max_size:,} chars")
@@ -621,7 +621,7 @@ class SmartSplitter:
             cut_point = self._find_boundary(prev_chunk, cut_point, BoundaryType.SENTENCE, forward=True)
             overlap_text = prev_chunk[cut_point:]
         
-        return f"\n{'=' * 50}\n[📋 CONTEXT FROM PREVIOUS SECTION - AI NOTE: This helps maintain continuity]\n{'=' * 50}\n{overlap_text}\n{'=' * 50}\n[📋 END CONTEXT]\n{'=' * 50}\n\n{current_chunk}"
+        return f"\n{'=' * 50}\n[CONTEXT FROM PREVIOUS SECTION]\n{'=' * 50}\n{overlap_text}\n{'=' * 50}\n[END CONTEXT]\n{'=' * 50}\n\n{current_chunk}"
     
     def validate_split(self, chunks: List[str]) -> Dict[str, Any]:
         """Validate split results and provide statistics."""
@@ -657,6 +657,6 @@ class SmartSplitter:
             saved_paths.append(filepath)
             file_size = len(chunk.encode('utf-8'))
             size_mb = file_size / (1024 * 1024)
-            print(f"  ✅ Saved: {filename} ({size_mb:.2f} MB, {len(chunk):,} chars)")
+            print(f"  Saved: {filename} ({size_mb:.2f} MB, {len(chunk):,} chars)")
         
         return saved_paths

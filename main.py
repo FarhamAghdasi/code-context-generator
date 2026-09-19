@@ -1,4 +1,4 @@
-# main.py (updated with smart splitter integration)
+# main.py
 """Enhanced project structure and file reader - Main entry point."""
 
 import os
@@ -88,7 +88,7 @@ def run_cli_mode(args):
         try:
             modified_after = datetime.datetime.strptime(args.modified_after, "%Y-%m-%d")
         except ValueError as e:
-            print(f"{Fore.YELLOW}⚠ Invalid date format. Using YYYY-MM-DD. Error: {e}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}Warning: Invalid date format. Using YYYY-MM-DD. Error: {e}{Style.RESET_ALL}")
     
     minify = args.minify
     
@@ -138,14 +138,14 @@ def run_cli_mode(args):
         interactive_split=True
     )
     
-    print(f"\n{Fore.GREEN}✅ {_('Output saved successfully')}{Style.RESET_ALL}")
+    print(f"\n{Fore.GREEN}Output saved successfully{Style.RESET_ALL}")
     if isinstance(saved_path, list):
-        print(f"{Fore.GREEN}✅ Saved in {len(saved_path)} files{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Saved in {len(saved_path)} files{Style.RESET_ALL}")
         for path in saved_path:
-            print(f"  📁 {path}")
+            print(f"  Folder: {path}")
     else:
-        print(f"{Fore.GREEN}✅ {_('Output saved to')}: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
-        print(f"{Fore.GREEN}✅ {_('Total size')}: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Output saved to: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Total size: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
     
     # Clean up temporary directory if remote repo was cloned
     if args.remote and folder_path and folder_path == "temp_repo":
@@ -159,7 +159,7 @@ def run_interactive_mode(args):
     result = interactive.run()
     
     if result is None:
-        print(f"\n{Fore.YELLOW}⚠ {_('Operation cancelled')}.{Style.RESET_ALL}")
+        print(f"\n{Fore.YELLOW}Operation cancelled.{Style.RESET_ALL}")
         return
     
     print(f"\n{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}")
@@ -205,14 +205,14 @@ def run_interactive_mode(args):
         interactive_split=True
     )
     
-    print(f"\n{Fore.GREEN}✅ {_('Output saved successfully')}{Style.RESET_ALL}")
+    print(f"\n{Fore.GREEN}Output saved successfully{Style.RESET_ALL}")
     if isinstance(saved_path, list):
-        print(f"{Fore.GREEN}✅ Saved in {len(saved_path)} files{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Saved in {len(saved_path)} files{Style.RESET_ALL}")
         for path in saved_path:
-            print(f"  📁 {path}")
+            print(f"  Folder: {path}")
     else:
-        print(f"{Fore.GREEN}✅ {_('Output saved to')}: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
-        print(f"{Fore.GREEN}✅ {_('Total size')}: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Output saved to: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}Total size: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
 
 
 def main():
@@ -235,13 +235,13 @@ def main():
             run_interactive_mode(args)
             
     except ValueError as e:
-        print(f"\n{Fore.RED}❌ {_('Error')}: {e}{Style.RESET_ALL}")
+        print(f"\n{Fore.RED}Error: {e}{Style.RESET_ALL}")
         sys.exit(1)
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}⚠ {_('Operation cancelled by user')}.{Style.RESET_ALL}")
+        print(f"\n{Fore.YELLOW}Operation cancelled by user.{Style.RESET_ALL}")
         sys.exit(0)
     except Exception as e:
-        print(f"\n{Fore.RED}❌ {_('Unexpected error')}: {e}{Style.RESET_ALL}")
+        print(f"\n{Fore.RED}Unexpected error: {e}{Style.RESET_ALL}")
         import logging
         logging.exception("Unexpected error occurred")
         sys.exit(1)

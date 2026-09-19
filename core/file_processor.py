@@ -96,7 +96,7 @@ class FileProcessor:
                 content = raw_data.decode(encoding, errors="replace")
             
             if self.check_sensitive_content(content):
-                print(f"{Fore.YELLOW}⚠ Warning: Sensitive content detected in {file_path}. Masking...{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}Warning: Sensitive content detected in {file_path}. Masking...{Style.RESET_ALL}")
                 content = "[MASKED SENSITIVE CONTENT]"
 
             # Apply minification if enabled

@@ -81,22 +81,22 @@ class OutputGenerator:
             # Copy to clipboard if requested
             if copy_to_clipboard:
                 clipboard_copy(output)
-                print(f"{Fore.GREEN}✅ Copied to clipboard{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}Copied to clipboard{Style.RESET_ALL}")
             
             # Check if splitting is needed
             should_split = False
             use_advanced = False
             
             if interactive_split and output_size > 12000:  # 12KB threshold
-                print(f"\n{Fore.YELLOW}⚠️ Output size: {output_size:,} characters{Style.RESET_ALL}")
+                print(f"\n{Fore.YELLOW}Output size: {output_size:,} characters{Style.RESET_ALL}")
                 
                 # Check if user has saved preference
                 if self.user_split_preference == 'simple':
-                    print(f"{Fore.CYAN}ℹ️ Using simple split mode (your saved preference){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}Using simple split mode (your saved preference){Style.RESET_ALL}")
                     should_split = True
                     use_advanced = False
                 elif self.user_split_preference == 'advanced':
-                    print(f"{Fore.CYAN}ℹ️ Using advanced split mode (your saved preference){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}Using advanced split mode (your saved preference){Style.RESET_ALL}")
                     should_split = True
                     use_advanced = True
                 else:
@@ -107,7 +107,7 @@ class OutputGenerator:
                     print(f"  {Fore.GREEN}3.{Style.RESET_ALL} Don't split (save as single file)")
                     print(f"  {Fore.GREEN}4.{Style.RESET_ALL} Remember my choice for future (don't ask again)")
                     
-                    choice = input(f"\n{Fore.YELLOW}👉 Enter your choice (1-4): {Style.RESET_ALL}").strip()
+                    choice = input(f"\n{Fore.YELLOW}Enter your choice (1-4): {Style.RESET_ALL}").strip()
                     
                     if choice == '1':
                         should_split = True
@@ -134,7 +134,7 @@ class OutputGenerator:
                         print(f"  {Fore.GREEN}2.{Style.RESET_ALL} Always use Advanced split")
                         print(f"  {Fore.GREEN}3.{Style.RESET_ALL} Never split (single file)")
                         
-                        pref_choice = input(f"\n{Fore.YELLOW}👉 Enter your choice (1-3): {Style.RESET_ALL}").strip()
+                        pref_choice = input(f"\n{Fore.YELLOW}Enter your choice (1-3): {Style.RESET_ALL}").strip()
                         if pref_choice == '1':
                             self._save_split_preference('simple')
                             should_split = True
@@ -158,23 +158,23 @@ class OutputGenerator:
                     preferences = self.smart_splitter.get_split_preferences_interactive()
                     
                     # Split the content
-                    print(f"\n{Fore.CYAN}🔪 Splitting content...{Style.RESET_ALL}")
+                    print(f"\n{Fore.CYAN}Splitting content...{Style.RESET_ALL}")
                     chunks = self.smart_splitter.split_content(output, preferences)
                     
                     # Validate split
                     stats = self.smart_splitter.validate_split(chunks)
                     
-                    print(f"\n{Fore.GREEN}✅ Split Results:{Style.RESET_ALL}")
-                    print(f"  📁 Number of files: {stats['num_chunks']}")
-                    print(f"  📊 Average size: {stats['avg_size']:,} chars")
-                    print(f"  📈 Size range: {stats['min_size']:,} - {stats['max_size']:,} chars")
-                    print(f"  ⚖️  Balanced: {'Yes' if stats['is_balanced'] else 'No'}")
+                    print(f"\n{Fore.GREEN}Split Results:{Style.RESET_ALL}")
+                    print(f"  Number of files: {stats['num_chunks']}")
+                    print(f"  Average size: {stats['avg_size']:,} chars")
+                    print(f"  Size range: {stats['min_size']:,} - {stats['max_size']:,} chars")
+                    print(f"  Balanced: {'Yes' if stats['is_balanced'] else 'No'}")
                     
                     # Save split files
                     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
                     output_dir = os.path.join("output", f"split_{timestamp}")
                     
-                    print(f"\n{Fore.CYAN}💾 Saving split files...{Style.RESET_ALL}")
+                    print(f"\n{Fore.CYAN}Saving split files...{Style.RESET_ALL}")
                     saved_paths = self.smart_splitter.save_split_files(
                         chunks, output_dir,
                         base_name=f"project_structure_{timestamp}",
@@ -182,8 +182,8 @@ class OutputGenerator:
                     )
                     
                     print(f"\n{Fore.GREEN}{'=' * 60}{Style.RESET_ALL}")
-                    print(f"{Fore.GREEN}✅ SUCCESS! Split into {len(saved_paths)} files{Style.RESET_ALL}")
-                    print(f"{Fore.GREEN}📁 Location: {output_dir}{Style.RESET_ALL}")
+                    print(f"{Fore.GREEN}SUCCESS! Split into {len(saved_paths)} files{Style.RESET_ALL}")
+                    print(f"{Fore.GREEN}Location: {output_dir}{Style.RESET_ALL}")
                     print(f"{Fore.GREEN}{'=' * 60}{Style.RESET_ALL}")
                     
                     return saved_paths
@@ -205,7 +205,7 @@ class OutputGenerator:
                             f.write(chunk)
                         saved_paths.append(filepath)
                     
-                    print(f"\n{Fore.GREEN}✅ Saved in {len(saved_paths)} files{Style.RESET_ALL}")
+                    print(f"\n{Fore.GREEN}Saved in {len(saved_paths)} files{Style.RESET_ALL}")
                     return saved_paths
             
             # If not splitting, save as single file
@@ -218,8 +218,8 @@ class OutputGenerator:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(output)
             
-            print(f"\n{Fore.GREEN}✅ Saved to: {filepath}{Style.RESET_ALL}")
-            print(f"{Fore.GREEN}📄 File size: {len(output.encode('utf-8')):,} bytes{Style.RESET_ALL}")
+            print(f"\n{Fore.GREEN}Saved to: {filepath}{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}File size: {len(output.encode('utf-8')):,} bytes{Style.RESET_ALL}")
             
             # Try to open the file
             try:

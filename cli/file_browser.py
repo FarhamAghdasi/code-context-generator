@@ -98,7 +98,7 @@ class FileBrowser:
             print(f"\n{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}")
             print(f"{Fore.CYAN}Interactive File Browser - {folder_path}{Style.RESET_ALL}")
             print(f"{Fore.YELLOW}Selected: {len(selected_files)} files{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}Commands: ↑↓=Navigate | →=Enter Dir | ←=Back | SPACE=Select | A=Select All | "
+            print(f"{Fore.YELLOW}Commands: UP/DOWN=Navigate | RIGHT=Enter Dir | LEFT=Back | SPACE=Select | A=Select All | "
                   f"N=Deselect All | ENTER=Done | Q=Quit{Style.RESET_ALL}")
             print(f"{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}\n")
             
@@ -115,9 +115,9 @@ class FileBrowser:
                     status = f"[{selected_count}/{file_count}]" if selected_count > 0 else ""
                     
                     if idx == current_dir:
-                        print(f"{Fore.GREEN}{prefix}📁 {dir_name} {status} ({file_count} files, {size_color}{size_str}{Style.RESET_ALL})")
+                        print(f"{Fore.GREEN}{prefix}[DIR] {dir_name} {status} ({file_count} files, {size_color}{size_str}{Style.RESET_ALL})")
                     else:
-                        print(f"{prefix}📁 {dir_name} {status} ({file_count} files, {size_color}{size_str}{Style.RESET_ALL})")
+                        print(f"{prefix}[DIR] {dir_name} {status} ({file_count} files, {size_color}{size_str}{Style.RESET_ALL})")
             
             else:  # view_mode == 'files'
                 current_dir_name = dirs[current_dir]
@@ -132,11 +132,11 @@ class FileBrowser:
                     checkbox = "[X]" if file_info['path'] in selected_files else "[ ]"
                     
                     if idx == current_file:
-                        print(f"{Fore.GREEN}{prefix}{checkbox} 📄 {file_info['name']} ({size_color}{size_str}{Style.RESET_ALL})")
+                        print(f"{Fore.GREEN}{prefix}{checkbox} [FILE] {file_info['name']} ({size_color}{size_str}{Style.RESET_ALL})")
                     elif file_info['path'] in selected_files:
-                        print(f"{Fore.CYAN}{prefix}{checkbox} 📄 {file_info['name']} ({size_color}{size_str}{Style.RESET_ALL})")
+                        print(f"{Fore.CYAN}{prefix}{checkbox} [FILE] {file_info['name']} ({size_color}{size_str}{Style.RESET_ALL})")
                     else:
-                        print(f"{prefix}{checkbox} 📄 {file_info['name']} ({size_color}{size_str}{Style.RESET_ALL})")
+                        print(f"{prefix}{checkbox} [FILE] {file_info['name']} ({size_color}{size_str}{Style.RESET_ALL})")
             
             # Get user input
             key = getch()
@@ -234,7 +234,7 @@ class TreeFileBrowser:
         print(f"\n{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}Tree View - {self.folder_path}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Selected: {selected_count} files{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Commands: ↑↓=Navigate | →=Expand | ←=Collapse | SPACE=Select | A=All | N=None | ENTER=Done | Q=Quit{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Commands: UP/DOWN=Navigate | RIGHT=Expand | LEFT=Collapse | SPACE=Select | A=All | N=None | ENTER=Done | Q=Quit{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}\n")
 
         for node, prefix in visible:
