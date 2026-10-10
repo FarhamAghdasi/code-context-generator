@@ -4,10 +4,12 @@
 from cli.argument_parser import ArgumentParser
 from cli.interactive_mode import InteractiveMode
 from cli.file_browser import FileBrowser, TreeFileBrowser
+from cli.drag_drop import DragDropSelector
 
 __all__ = [
     'ArgumentParser',
     'InteractiveMode',
     'FileBrowser',
-    'TreeFileBrowser'
+    'TreeFileBrowser',
+    'DragDropSelector'
 ]

@@ -10,7 +10,7 @@ from core.config_manager import ConfigManager
 from core.folder_scanner import FolderScanner
 from prompts.templates import PROMPT_TEMPLATES
 from cli.file_browser import FileBrowser, TreeFileBrowser
-
+from cli.drag_drop import DragDropSelector
 
 class InteractiveMode:
     """Interactive mode handler with step-by-step user input."""
@@ -61,7 +61,8 @@ class InteractiveMode:
         modes = [
             "Standard Mode (with prompts and filters)",
             "Interactive File Browser (select specific files)",
-            "Tree View Picker (navigate folders and select files)"
+            "Tree View Picker (navigate folders and select files)",
+            "Drag & Drop (drop files/folders from your file manager)"
         ]
         
         mode_choice = select_from_list(modes, "Select Mode:")
@@ -114,30 +115,48 @@ class InteractiveMode:
             project_type = saved_settings['project_type']
         config = self.config_manager.get_project_config(project_type)
         
-        # Step 3: Folder path
-        print(f"\n{Fore.CYAN}Enter folder path or GitHub URL{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Default: {os.getcwd()}{Style.RESET_ALL}")
-        folder_input = input(f"{Fore.GREEN}> {Style.RESET_ALL}").strip()
-        
-        if not folder_input:
-            folder_path = os.getcwd()
-        elif folder_input.startswith("http"):
-            try:
-                folder_path = clone_remote_repo(folder_input)
-                print(f"{Fore.GREEN}Repository cloned successfully to: {folder_path}{Style.RESET_ALL}")
-            except Exception as e:
-                print(f"{Fore.RED}Error cloning repository: {e}{Style.RESET_ALL}")
-                return None
-        else:
-            try:
-                folder_path = validate_path(folder_input)
-            except ValueError as e:
-                print(f"{Fore.RED}{e}{Style.RESET_ALL}")
-                return None
-        
-        # Step 4: File browser mode or standard mode
+        # Step 3: Folder path (or Drag & Drop selection)
         selected_files = None
-        if mode_choice == modes[1]:
+        if mode_choice == modes[3]:
+            if not DragDropSelector.is_available():
+                print(f"{Fore.RED}Drag & Drop mode requires 'tkinterdnd2'.{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}Install it with: pip install tkinterdnd2{Style.RESET_ALL}")
+                return None
+            dnd = DragDropSelector(config['exclude_folders'], config['exclude_extensions'])
+            dnd_result = dnd.browse()
+            if not dnd_result or not dnd_result.get('files'):
+                print(f"{Fore.RED}Drag & Drop cancelled or no files selected.{Style.RESET_ALL}")
+                return None
+            folder_path = dnd_result['folder_path']
+            selected_files = dnd_result['files']
+            print(f"\n{Fore.GREEN}Selected {len(selected_files)} files from {folder_path}{Style.RESET_ALL}")
+        else:
+            print(f"\n{Fore.CYAN}Enter folder path or GitHub URL{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}Default: {os.getcwd()}{Style.RESET_ALL}")
+            folder_input = input(f"{Fore.GREEN}> {Style.RESET_ALL}").strip()
+            if not folder_input:
+                folder_path = os.getcwd()
+            elif folder_input.startswith("http"):
+                try:
+                    folder_path = clone_remote_repo(folder_input)
+                    print(f"{Fore.GREEN}Repository cloned successfully to: {folder_path}{Style.RESET_ALL}")
+                except Exception as e:
+                    print(f"{Fore.RED}Error cloning repository: {e}{Style.RESET_ALL}")
+                    return None
+            else:
+                try:
+                    folder_path = validate_path(folder_input)
+                except ValueError as e:
+                    print(f"{Fore.RED}{e}{Style.RESET_ALL}")
+                    return None
+        # Step 4: File browser mode or standard mode
+        if selected_files is not None:
+            filter_folder = None
+            keyword = None
+            regex = None
+            min_size = 0
+            modified_after = None
+        elif mode_choice == modes[1]:
             file_browser = FileBrowser(config['exclude_folders'], config['exclude_extensions'])
             selected_files = file_browser.browse(folder_path)
             if selected_files is None:
