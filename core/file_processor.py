@@ -18,14 +18,36 @@ class FileProcessor:
         pass
     
     def is_binary_file(self, file_path):
-        """Check if a file is binary."""
+        """Check if a file is binary.
+
+        Heuristics (in order):
+        1. Empty files are treated as text.
+        2. Presence of NUL bytes => binary.
+        3. Strict UTF-8 decoding => text (covers the vast majority of source files).
+        4. Fallback: chardet with a lenient confidence threshold.
+        """
         try:
             with open(file_path, "rb") as f:
-                content = f.read(1024)
-                result = chardet.detect(content)
-                return result["confidence"] < 0.9 or result["encoding"] is None
+                content = f.read(4096)
+
+            if not content:
+                return False
+
+            if b'\x00' in content:
+                return True
+
+            try:
+                content.decode('utf-8')
+                return False
+            except UnicodeDecodeError:
+                pass
+
+            result = chardet.detect(content)
+            if result["encoding"] is None:
+                return True
+            return result["confidence"] < 0.5
         except Exception:
-            return True
+            return Truel
     
     def check_sensitive_content(self, content):
         """Check for sensitive content like API keys."""

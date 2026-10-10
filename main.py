@@ -166,13 +166,14 @@ def run_interactive_mode(args):
     print(f"{Fore.CYAN}{_('Processing project')}...{Style.RESET_ALL}")
     print(f"{Fore.CYAN}{'=' * 60}{Style.RESET_ALL}\n")
     
-    # Get folder structure
+    # Get folder structure (filtered by the user's selection when applicable)
     scanner = FolderScanner(interactive.config_manager)
     structure = scanner.get_structure(
         result['folder_path'],
         filter_folder=result['filter_folder'],
         exclude_folders=result['exclude_folders'],
-        exclude_extensions=result['exclude_extensions']
+        exclude_extensions=result['exclude_extensions'],
+        selected_files=result.get('selected_files')
     )
     
     # Get file contents

@@ -81,12 +81,20 @@ class FolderScanner:
         
         return "generic", 0
     
-    def get_structure(self, folder_path, indent=0, filter_folder=None, exclude_folders=None, exclude_extensions=None):
-        """Get folder structure with size information."""
+    def get_structure(self, folder_path, indent=0, filter_folder=None, exclude_folders=None, exclude_extensions=None,
+                      selected_files=None, base_path=None):
+        """Get folder structure with size information.
+
+        When selected_files is provided (a list of paths relative to base_path),
+        only files in that set - and the directories containing them - are rendered.
+        """
         if exclude_folders is None:
             exclude_folders = ['.git']
         if exclude_extensions is None:
             exclude_extensions = ['.svg', '.jpg', '.png', '.bin']
+
+        if base_path is None:
+            base_path = folder_path
 
         structure = ""
         try:
@@ -96,30 +104,47 @@ class FolderScanner:
             logging.error(f"Could not list directory {folder_path}: {e}")
             return f"[ERROR] Could not list directory {folder_path}: {e}\n"
 
-        for index, item in enumerate(items):
+        # Build the list of visible items first so that is_last is computed correctly
+        filtered_items = []
+        for item in items:
             if item in exclude_folders:
                 continue
-
             item_path = os.path.join(folder_path, item)
-            is_last = index == len(items) - 1
-
             if os.path.isdir(item_path):
                 if filter_folder and filter_folder not in item:
                     continue
-
-                size = get_folder_size(item_path)
-                structure += '    ' * (indent // 4)
-                structure += '└── ' if is_last else '├── '
-                structure += f'[DIR] {item} ({format_size(size)})\n'
-
-                structure += self.get_structure(item_path, indent + 4, filter_folder, exclude_folders, exclude_extensions)
+                if selected_files is not None:
+                    # Keep the directory only if it (or a descendant) contains a selected file
+                    rel_dir = os.path.relpath(item_path, base_path)
+                    prefix = rel_dir + os.sep
+                    has_match = any(sf == rel_dir or sf.startswith(prefix) for sf in selected_files)
+                    if not has_match:
+                        continue
+                filtered_items.append((item, item_path, True))
             else:
                 file_ext = os.path.splitext(item)[1].lower()
                 if file_ext in exclude_extensions:
                     continue
+                if selected_files is not None:
+                    rel_path = os.path.relpath(item_path, base_path)
+                    if rel_path not in selected_files:
+                        continue
+                filtered_items.append((item, item_path, False))
 
+        for index, (item, item_path, is_dir) in enumerate(filtered_items):
+            is_last = index == len(filtered_items) - 1
+            if is_dir:
+                size = get_folder_size(item_path)
+                structure += '    ' * (indent // 4)
+                structure += '└── ' if is_last else '├── '
+                structure += f'[DIR] {item} ({format_size(size)})\n'
+                structure += self.get_structure(
+                    item_path, indent + 4, filter_folder,
+                    exclude_folders, exclude_extensions,
+                    selected_files=selected_files, base_path=base_path
+                )
+            else:
                 size = os.path.getsize(item_path)
                 structure += '    ' * (indent // 4)
                 structure += ('└── ' if is_last else '├── ') + f'[FILE] {item} ({format_size(size)})\n'
-
         return structure

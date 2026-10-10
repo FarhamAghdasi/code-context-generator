@@ -138,9 +138,17 @@ class DragDropSelector:
         file_listbox = tk.Listbox(
             root, bg="#252526", fg="#d4d4d4",
             selectbackground="#094771",
-            font=("Consolas", 9), height=10
+            font=("Consolas", 9), height=10,
+            selectmode="extended"
         )
         file_listbox.pack(fill="both", expand=True, padx=20, pady=(4, 8))
+
+        tk.Label(
+            root,
+            text="Tip: select one or more items and press DEL (or use 'Remove Selected').",
+            font=("Segoe UI", 8, "italic"),
+            fg="#808080", bg="#1e1e1e"
+        ).pack(pady=(0, 4))
 
         info_label = tk.Label(
             root, text="No files dropped yet.",
@@ -191,6 +199,33 @@ class DragDropSelector:
             state["root"] = None
             update_view()
 
+        def remove_selected() -> None:
+            """Remove highlighted entries from the pending list (does not touch disk)."""
+            indices = list(file_listbox.curselection())
+            if not indices:
+                return
+            files = list(state["files"])  # type: ignore[arg-type]
+            # Delete from the end so earlier indices stay valid
+            for idx in reversed(indices):
+                if 0 <= idx < len(files):
+                    files.pop(idx)
+            state["files"] = files
+            # Recompute the common root from the remaining files
+            if files:
+                try:
+                    parents = [os.path.dirname(os.path.abspath(f)) for f in files]
+                    state["root"] = os.path.commonpath(parents)
+                except ValueError:
+                    state["root"] = os.path.dirname(os.path.abspath(files[0]))
+            else:
+                state["root"] = None
+            update_view()
+
+        def _on_delete_key(event) -> str:
+            """Key handler for DEL / Backspace on the listbox."""
+            remove_selected()
+            return "break"
+
         def confirm() -> None:
             if not state["files"]:
                 messagebox.showwarning("No files", "Please drop at least one file or folder.")
@@ -209,10 +244,20 @@ class DragDropSelector:
         file_listbox.drop_target_register(DND_FILES)
         file_listbox.dnd_bind('<<Drop>>', on_drop)
 
+        # Keyboard shortcuts for removing entries
+        file_listbox.bind('<Delete>', _on_delete_key)
+        file_listbox.bind('<BackSpace>', _on_delete_key)
+
         tk.Button(
             btn_frame, text="Use These Files", command=confirm,
             bg="#0e639c", fg="white", padx=16, pady=5,
             relief="flat", activebackground="#1177bb", activeforeground="white"
+        ).pack(side="left", padx=4)
+
+        tk.Button(
+            btn_frame, text="Remove Selected", command=remove_selected,
+            bg="#7a3030", fg="white", padx=16, pady=5,
+            relief="flat", activebackground="#9a4040", activeforeground="white"
         ).pack(side="left", padx=4)
 
         tk.Button(
