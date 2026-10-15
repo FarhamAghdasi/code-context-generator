@@ -196,7 +196,13 @@ def run_interactive_mode(args):
     output = output_generator.format_output(
         structure, contents, result['output_format'], result['prompt_template']
     )
-    
+
+    # Reuse the split configuration stored in the loaded profile, if any.
+    if result.get('split_preference'):
+        output_generator.user_split_preference = result['split_preference']
+    if result.get('split_settings'):
+        output_generator.set_pending_split_preferences(result['split_settings'])
+
     # Use smart splitter for saving
     saved_path = output_generator.save_with_smart_split(
         output,
@@ -215,7 +221,13 @@ def run_interactive_mode(args):
         print(f"{Fore.GREEN}Output saved to: {Fore.BLUE}{saved_path}{Style.RESET_ALL}")
         print(f"{Fore.GREEN}Total size: {format_size(len(output.encode('utf-8')))}{Style.RESET_ALL}")
     
-    save_choice = input(f"\n{Fore.YELLOW}Remember these settings for future? (y/n): {Style.RESET_ALL}").strip().lower()
+    # Skip the save prompt when the run reused a loaded profile verbatim -
+    # nothing changed, so there is nothing to persist again.
+    if result.get('profile_unchanged'):
+        print(f"\n{Fore.CYAN}Profile reused unchanged - skipping save prompt.{Style.RESET_ALL}")
+        save_choice = 'n'
+    else:
+        save_choice = input(f"\n{Fore.YELLOW}Remember these settings for future? (y/n): {Style.RESET_ALL}").strip().lower()
     if save_choice == 'y':
         scope_choice = input(f"{Fore.YELLOW}Save as system profile or directory config? (system/dir): {Style.RESET_ALL}").strip().lower()
         if scope_choice in ('system', 'dir'):
@@ -238,14 +250,17 @@ def run_interactive_mode(args):
                         'minify': result['minify'],
                         'copy_to_clipboard': result['copy_to_clipboard'],
                         'selected_files': result.get('selected_files'),
-                        'prompt_keys': [],
+                        'prompt_keys': result.get('prompt_keys', []),
                         'split_preference': output_generator.user_split_preference,
-                        'split_settings': None,
+                        'split_settings': output_generator.last_split_preferences,
                         'filter_folder': result.get('filter_folder'),
                         'keyword': result.get('keyword'),
                         'regex': result.get('regex'),
                         'min_size': result.get('min_size', 0),
-                        'modified_after': result['modified_after'].isoformat() if result.get('modified_after') else None
+                        'modified_after': result['modified_after'].isoformat() if result.get('modified_after') else None,
+                        # Persist the folder path so the profile can be reused and
+                        # its relative selected_files resolved on the next load.
+                        'folder_path': result['folder_path']
                     }
                     interactive.config_manager.save_settings(profile_name, settings_to_save, scope="system")
                     print(f"{Fore.GREEN}Settings saved to system profile '{profile_name}'.{Style.RESET_ALL}")

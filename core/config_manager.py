@@ -105,7 +105,8 @@ DEFAULT_SETTINGS_KEYS = {
     "keyword",
     "regex",
     "min_size",
-    "modified_after"
+    "modified_after",
+    "folder_path"
 }
 
 

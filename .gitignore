@@ -4,3 +4,4 @@ output/
 temp_repo/
 locale/*.mo
 __pycache__
+profiles.json

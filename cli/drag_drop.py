@@ -4,6 +4,11 @@ import logging
 from typing import Dict, List, Optional
 
 from colorama import Fore, Style
+from utils.helpers import (
+    format_size, format_tokens, get_context_color,
+    compute_file_tokens,
+    CONTEXT_LOW_BYTES, CONTEXT_MEDIUM_BYTES,
+)
 
 try:
     import tkinter as tk
@@ -89,9 +94,14 @@ class DragDropSelector:
             # Different drives on Windows or other edge case
             return os.path.dirname(os.path.abspath(files[0]))
 
-    def browse(self) -> Optional[Dict[str, object]]:
+    def browse(self, initial_files: Optional[List[str]] = None) -> Optional[Dict[str, object]]:
         """
         Open the drag-and-drop window.
+
+        Args:
+            initial_files: Optional pre-selected files (absolute paths). When
+                provided, the window opens with these entries already listed
+                so the user can add/remove on top of an existing selection.
 
         Returns:
             dict with keys 'folder_path' and 'files' (relative paths), or
@@ -162,16 +172,59 @@ class DragDropSelector:
 
         state: Dict[str, object] = {"files": [], "root": None, "originals": []}
 
+        # Seed initial files from the caller (e.g. a loaded profile). Directories
+        # in the seed are expanded to files, and the common root is recomputed
+        # so the Listbox displays relative paths from the start.
+        if initial_files:
+            seeded_files: List[str] = []
+            seeded_originals: List[str] = []
+            for p in initial_files:
+                abs_p = os.path.abspath(p)
+                if abs_p not in seeded_originals:
+                    seeded_originals.append(abs_p)
+                if os.path.isfile(abs_p):
+                    if abs_p not in seeded_files:
+                        seeded_files.append(abs_p)
+                elif os.path.isdir(abs_p):
+                    for f in self._collect_files([abs_p]):
+                        if f not in seeded_files:
+                            seeded_files.append(f)
+            state["files"] = seeded_files
+            state["originals"] = seeded_originals
+            state["root"] = self._find_common_root(seeded_originals, seeded_files)
+
         def update_view() -> None:
             file_listbox.delete(0, tk.END)
+            # Gather sizes for every pending file, then compute token estimates
+            # in one pass so the UI shows per-row and aggregate context cost.
+            infos = []
             for f in state["files"]:  # type: ignore[union-attr]
+                try:
+                    size = os.path.getsize(f)
+                except OSError:
+                    size = 0
+                infos.append({'full_path': f, 'size': size})
+            compute_file_tokens(infos)
+            total_size = 0
+            total_tokens = 0
+            for f, info in zip(state["files"], infos):  # type: ignore[arg-type]
                 try:
                     display = os.path.relpath(f, state["root"]) if state["root"] else f
                 except ValueError:
                     display = f
-                file_listbox.insert(tk.END, display)
+                size_str = format_size(info['size'])
+                token_str = format_tokens(info['tokens'])
+                file_listbox.insert(tk.END, f"{display}   [{size_str} / ~{token_str}]")
+                total_size += info['size']
+                total_tokens += info['tokens']
             root_text = state["root"] or "-"
-            info_label.config(text=f"{len(state['files'])} file(s)  |  Root: {root_text}")
+            info_label.config(
+                text=(
+                    f"{len(state['files'])} file(s)  |  "
+                    f"Total: {format_size(total_size)} / ~{format_tokens(total_tokens)}  |  "
+                    f"Root: {root_text}"
+                )
+            )
 
         def on_drop(event) -> None:
             paths = self._parse_dropped_data(event.data)
@@ -273,6 +326,11 @@ class DragDropSelector:
         ).pack(side="left", padx=4)
 
         root.protocol("WM_DELETE_WINDOW", cancel)
+
+        # Render any seeded files before showing the window so the initial
+        # selection is visible without requiring a drop event first.
+        update_view()
+
         root.mainloop()
 
         if self.selected_files is None or not self.selected_files:

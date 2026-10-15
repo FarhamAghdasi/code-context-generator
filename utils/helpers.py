@@ -50,6 +50,75 @@ def get_size_color(bytes_size):
         return Fore.GREEN
 
 
+# Context size thresholds (bytes) used for per-file color coding.
+CONTEXT_LOW_BYTES = 16 * 1024       # < 16 KB   -> green
+CONTEXT_MEDIUM_BYTES = 128 * 1024   # 16-128 KB -> yellow ; > 128 KB -> red
+# Cap for the cheap prefix read used to estimate character counts.
+CONTEXT_READ_CAP = 1_048_576        # 1 MB
+
+
+def get_context_color(size_bytes):
+    """Return a colorama color for the given file/folder byte size."""
+    if size_bytes > CONTEXT_MEDIUM_BYTES:
+        return Fore.RED
+    elif size_bytes > CONTEXT_LOW_BYTES:
+        return Fore.YELLOW
+    return Fore.GREEN
+
+
+def format_tokens(tokens):
+    """Format a token count as a compact human-readable string."""
+    if tokens >= 1_000_000:
+        return f"{tokens / 1_000_000:.2f}M tok"
+    if tokens >= 1_000:
+        return f"{tokens / 1_000:.1f}K tok"
+    return f"{tokens} tok"
+
+
+def format_context(size_bytes, tokens):
+    """Return 'SIZE / ~TOKENS' used across all file selectors."""
+    return f"{format_size(size_bytes)} / ~{format_tokens(tokens)}"
+
+
+def compute_file_tokens(files_info, cap_bytes=CONTEXT_READ_CAP):
+    """Populate 'chars' and 'tokens' on each file info dict.
+
+    Cheap (small) files are read fully up to the cap so the estimate is exact;
+    huge files fall back to the on-disk byte size to avoid slow I/O.
+    """
+    ordered = sorted(files_info, key=lambda x: x.get('size', 0))
+    for info in ordered:
+        size = info.get('size', 0)
+        full_path = info.get('full_path') or info.get('path')
+        if size == 0 or not full_path:
+            info['chars'] = 0
+            info['tokens'] = 0
+            continue
+        words = 0
+        if size <= cap_bytes:
+            try:
+                with open(full_path, 'rb') as fh:
+                    raw = fh.read()
+                chars = len(raw)
+                # Cheap word count for a blended token estimate; decoding errors
+                # are ignored so unusual encodings still yield a usable value.
+                words = len(raw.decode('utf-8', errors='ignore').split())
+            except OSError:
+                chars = size
+        else:
+            chars = size
+        info['chars'] = chars
+        # Blended estimate: average of the char-based (chars / 4) and
+        # word-based (words / 0.75) heuristics that approximate BPE
+        # tokenizers. When the word count is unavailable (huge/skipped
+        # files) fall back to the char-only approximation.
+        if words > 0:
+            info['tokens'] = max(int(0.5 * (chars / 4 + words / 0.75)), 1)
+        else:
+            info['tokens'] = max(chars // 4, 1)
+    return files_info
+
+
 def getch():
     """Get a single character from standard input - works on Windows, Linux, and macOS."""
     if platform.system() == 'Windows':

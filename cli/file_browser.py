@@ -6,7 +6,10 @@ import platform
 from dataclasses import dataclass, field
 from typing import List, Optional
 from colorama import Fore, Style
-from utils.helpers import getch, format_size, get_size_color
+from utils.helpers import (
+    getch, format_size, get_size_color, get_context_color,
+    format_tokens, compute_file_tokens,
+)
 
 
 @dataclass
@@ -18,6 +21,10 @@ class TreeNode:
     children: List["TreeNode"] = field(default_factory=list)
     expanded: bool = False
     selected: bool = False
+    # Aggregate size / estimated token count. For directories these are the
+    # sums over the subtree so the tree view can display context cost up front.
+    size: int = 0
+    tokens: int = 0
 
 
 class FileBrowser:
@@ -28,7 +35,7 @@ class FileBrowser:
         self.exclude_folders = exclude_folders if exclude_folders is not None else ['.git']
         self.exclude_extensions = exclude_extensions if exclude_extensions is not None else ['.svg', '.jpg', '.png', '.bin']
     
-    def browse(self, folder_path):
+    def browse(self, folder_path, initial_selected=None):
         """Interactive file browser with selection capability."""
         # Validate path
         if not os.path.exists(folder_path):
@@ -79,12 +86,17 @@ class FileBrowser:
                 file_tree[dir_name] = []
             file_tree[dir_name].append(file_info)
         
+        # Estimate token counts once so the header and each row can display them.
+        compute_file_tokens(all_files)
+        
         if not file_tree:
             print(f"{Fore.YELLOW}No files found in the specified directory.{Style.RESET_ALL}")
             input("Press Enter to continue...")
             return []
         
-        selected_files = set()
+        # Seed selection from the caller (e.g. a loaded profile) so an
+        # existing selection is preserved when the browser opens.
+        selected_files = set(initial_selected) if initial_selected else set()
         current_dir = 0
         current_file = 0
         view_mode = 'dirs'  # 'dirs' or 'files'
@@ -95,9 +107,13 @@ class FileBrowser:
             # Clear screen
             os.system('cls' if platform.system() == 'Windows' else 'clear')
             
+            # Aggregate the currently selected files for the header line.
+            sel_size = sum(f['size'] for f in all_files if f['path'] in selected_files)
+            sel_tokens = sum(f.get('tokens', 0) for f in all_files if f['path'] in selected_files)
+            
             print(f"\n{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}")
             print(f"{Fore.CYAN}Interactive File Browser - {folder_path}{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}Selected: {len(selected_files)} files{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}Selected: {len(selected_files)} files  |  Total: {format_size(sel_size)} / ~{format_tokens(sel_tokens)}{Style.RESET_ALL}")
             print(f"{Fore.YELLOW}Commands: UP/DOWN=Navigate | RIGHT=Enter Dir | LEFT=Back | SPACE=Select | A=Select All | "
                   f"N=Deselect All | ENTER=Done | Q=Quit{Style.RESET_ALL}")
             print(f"{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}\n")
@@ -233,7 +249,21 @@ class TreeFileBrowser:
         selected_count = self._count_selected_files(root)
         print(f"\n{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}Tree View - {self.folder_path}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Selected: {selected_count} files{Style.RESET_ALL}")
+        # Aggregate metrics of the currently selected files for the header.
+        sel_size = 0
+        sel_tokens = 0
+        for node in self._flatten(root):
+            if not node.is_dir and node.path in selected_files:
+                full = os.path.join(self.folder_path, node.path)
+                try:
+                    node_size = os.path.getsize(full)
+                except OSError:
+                    node_size = 0
+                info = {'full_path': full, 'size': node_size}
+                compute_file_tokens([info])
+                sel_size += node_size
+                sel_tokens += info['tokens']
+        print(f"{Fore.YELLOW}Selected: {selected_count} files  |  Total: {format_size(sel_size)} / ~{format_tokens(sel_tokens)}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Commands: UP/DOWN=Navigate | RIGHT=Expand | LEFT=Collapse | SPACE=Select | A=All | N=None | ENTER=Done | Q=Quit{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{'=' * 80}{Style.RESET_ALL}\n")
 
@@ -243,13 +273,34 @@ class TreeFileBrowser:
             else:
                 marker = "[X]" if node.path in selected_files else "[ ]"
             cursor = "> " if node is current_node else "  "
-            size_info = ""
-            if not node.is_dir and node.path in selected_files:
+            # Compute size and estimated token count for every node directly
+            # from disk so both files and dirs display a context cost.
+            if node.is_dir:
+                node_size = 0
+                node_tokens = 0
+                for child in self._flatten(node):
+                    if child.is_dir:
+                        continue
+                    child_path = os.path.join(self.folder_path, child.path)
+                    try:
+                        child_size = os.path.getsize(child_path)
+                    except OSError:
+                        child_size = 0
+                    child_info = {'full_path': child_path, 'size': child_size}
+                    compute_file_tokens([child_info])
+                    node_size += child_size
+                    node_tokens += child_info['tokens']
+            else:
+                full = os.path.join(self.folder_path, node.path)
                 try:
-                    size = os.path.getsize(os.path.join(self.folder_path, node.path))
-                    size_info = f" ({format_size(size)})"
+                    node_size = os.path.getsize(full)
                 except OSError:
-                    size_info = ""
+                    node_size = 0
+                info = {'full_path': full, 'size': node_size}
+                compute_file_tokens([info])
+                node_tokens = info['tokens']
+            size_color = get_context_color(node_size)
+            size_info = f" ({size_color}{format_size(node_size)}{Style.RESET_ALL} / ~{format_tokens(node_tokens)})"
             line = f"{prefix}{marker} {node.name}{size_info}"
             if node is current_node:
                 print(f"{Fore.GREEN}{cursor}{line}{Style.RESET_ALL}")
@@ -276,7 +327,7 @@ class TreeFileBrowser:
         walk([root])
         return result
 
-    def browse(self, folder_path):
+    def browse(self, folder_path, initial_selected=None):
         if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
             print(f"{Fore.RED}Error: Path does not exist or is not a directory: {folder_path}{Style.RESET_ALL}")
             return None
@@ -289,7 +340,8 @@ class TreeFileBrowser:
             input("Press Enter to continue...")
             return []
 
-        self._selected_files = set()
+        # Seed the selection so a profile's saved file list is restored.
+        self._selected_files = set(initial_selected) if initial_selected else set()
         current_node = root.children[0] if root.children else root
         visible_nodes = self._get_visible_nodes(root)
 

@@ -21,7 +21,15 @@ class OutputGenerator:
         self.smart_splitter = SmartSplitter()
         self.config_manager = config_manager or ConfigManager()
         self.user_split_preference = None
+        # Serialized split configuration captured from the last run (for reuse).
+        self.last_split_preferences = None
+        # When set, the advanced splitter reuses this configuration silently.
+        self.pending_split_preferences = None
         self._load_split_preference()
+
+    def set_pending_split_preferences(self, serialized) -> None:
+        """Store a previously saved split configuration to be reused on the next save."""
+        self.pending_split_preferences = serialized
     
     def _load_split_preference(self):
         """Load user's split preference from settings."""
@@ -86,12 +94,21 @@ class OutputGenerator:
             # Check if splitting is needed
             should_split = False
             use_advanced = False
+            # Reuse a previously saved split configuration if the caller
+            # supplied one (e.g. loaded from a profile).
+            pending_prefs = None
+            if self.pending_split_preferences:
+                pending_prefs = SmartSplitter.deserialize_preferences(self.pending_split_preferences)
             
             if interactive_split and output_size > 12000:  # 12KB threshold
                 print(f"\n{Fore.YELLOW}Output size: {output_size:,} characters{Style.RESET_ALL}")
                 
+                if pending_prefs:
+                    print(f"{Fore.CYAN}Reusing saved split configuration (skipping prompt).{Style.RESET_ALL}")
+                    should_split = True
+                    use_advanced = True
                 # Check if user has saved preference
-                if self.user_split_preference == 'simple':
+                elif self.user_split_preference == 'simple':
                     print(f"{Fore.CYAN}Using simple split mode (your saved preference){Style.RESET_ALL}")
                     should_split = True
                     use_advanced = False
@@ -147,8 +164,16 @@ class OutputGenerator:
             # Handle splitting
             if should_split:
                 if use_advanced:
-                    # Get splitting preferences from user
-                    preferences = self.smart_splitter.get_split_preferences_interactive()
+                    # Reuse the saved configuration when available; otherwise
+                    # prompt the user for a fresh one (the edit-profile flow
+                    # reaches here with pending_prefs=None so the prompt fires).
+                    if pending_prefs:
+                        preferences = pending_prefs
+                    else:
+                        preferences = self.smart_splitter.get_split_preferences_interactive()
+                    # Capture the effective configuration so the caller can
+                    # persist it alongside the profile (raw config only).
+                    self.last_split_preferences = SmartSplitter.serialize_preferences(preferences)
                     
                     # Split the content
                     print(f"\n{Fore.CYAN}Splitting content...{Style.RESET_ALL}")

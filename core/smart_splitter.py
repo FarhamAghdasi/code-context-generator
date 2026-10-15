@@ -68,7 +68,38 @@ class SmartSplitter:
                 'import': r'\nimport\s+\('
             }
         }
-    
+
+    @staticmethod
+    def serialize_preferences(prefs: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Convert a preferences dict with Enum values into a JSON-safe dict."""
+        if not prefs:
+            return None
+        data = dict(prefs)
+        strategy = data.get('strategy')
+        boundary = data.get('boundary_type')
+        if isinstance(strategy, SplitStrategy):
+            data['strategy'] = strategy.value
+        if isinstance(boundary, BoundaryType):
+            data['boundary_type'] = boundary.value
+        return data
+
+    @staticmethod
+    def deserialize_preferences(data: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Reverse serialize_preferences; returns None on invalid input."""
+        if not data:
+            return None
+        try:
+            prefs = dict(data)
+            strategy_val = prefs.get('strategy')
+            boundary_val = prefs.get('boundary_type')
+            if strategy_val is not None:
+                prefs['strategy'] = SplitStrategy(strategy_val)
+            if boundary_val is not None:
+                prefs['boundary_type'] = BoundaryType(boundary_val)
+            return prefs
+        except (ValueError, TypeError):
+            return None
+
     def get_split_preferences_interactive(self) -> Dict[str, Any]:
         """Get splitting preferences interactively from user."""
         print(f"\n{Fore.CYAN}{'=' * 70}{Style.RESET_ALL}")
